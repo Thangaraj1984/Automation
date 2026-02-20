@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# IDE / Editor
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Playwright
+playwright.log
+.playwright-mcp/
+
+# Temp / Dev
+_temp/
+*.bak
+*.swp
+*.log
+
+# Local deployment configuration (contains host/user details)
+project.config
+.env
+.env.*
+*.secret
+
+# Private keys / certs
+*.pem
+*.key
+*.p12
+*.crt
+
+# Docker (don't commit local overrides)
+docker-compose.override.yml

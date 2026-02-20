@@ -1,0 +1,13 @@
+# Copy this file to project.config and fill your own values.
+# Do NOT commit project.config (it is ignored by .gitignore).
+
+PROJECT_NAME=nse-options
+VM_USER=YOUR_VM_USER
+VM_HOST=YOUR_VM_PUBLIC_IP_OR_DNS
+VM_SSH_PORT=22
+VM_DIR=/home/YOUR_VM_USER/nse-options
+SSH_KEY_PATH=~/.ssh/id_rsa
+APP_DOMAIN=your-domain.example.com
+CERTBOT_EMAIL=you@example.com
+NGINX_CONTAINER_NAME=nginx
+DOCKER_NETWORK=app_network

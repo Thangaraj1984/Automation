@@ -1,0 +1,29 @@
+# NSE Options Flask Server — Docker Compose
+# =============================================
+# Uses a shared Docker network with your reverse-proxy container
+# Reverse proxy forwards HTTPS traffic to this container
+
+services:
+  nse-options-server:
+    build: .
+    container_name: nse-options-server
+    restart: unless-stopped
+    ports:
+      - "5050:5000"
+    environment:
+      - PYTHONUNBUFFERED=1
+      - TZ=Asia/Kolkata
+    networks:
+      - app_network
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    # Playwright Chromium needs these for headless browser
+    # --no-sandbox is already in the code, but we need /dev/shm
+    shm_size: '256m'
+
+networks:
+  app_network:
+    name: ${DOCKER_NETWORK:-app_network}
+    external: true

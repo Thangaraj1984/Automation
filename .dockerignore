@@ -1,0 +1,38 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# Temp / Dev
+_temp/
+*.bak
+*.swp
+*.log
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docs (not needed in image)
+README.md
+
+# Google Sheets script (not needed in container)
+google_sheets_script.gs
+
+# Deployment scripts
+deploy.sh
+deploy.bat
+vm.ps1
+
+# Playwright MCP
+.playwright-mcp/
