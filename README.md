@@ -3,8 +3,6 @@
 This project publishes NIFTY weekly options data from a Flask API to Google Sheets, including Greeks, buildups, and seller-panic signals.
 
 ## What was sanitized
-- Removed personal VM/IP/domain/account references.
-- Replaced hardcoded deployment details with placeholders.
 - Added single local config file model (`project.config`) for deployment scripts.
 
 ## Files to keep in GitHub
