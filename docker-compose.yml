@@ -1,0 +1,108 @@
+# NSE Market Data Stack - Docker Compose
+# ========================================
+# Deploys alongside existing Evolution API stack on EvolutionVM
+# Uses EXISTING network: azureuser_app_network
+# Uses SEPARATE TimescaleDB on port 5433 (not the existing postgres on 5432)
+
+services:
+  nse-timescaledb:
+    image: timescale/timescaledb:latest-pg16
+    container_name: nse-timescaledb
+    restart: unless-stopped
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_USER: ${DB_USER:-nseadmin}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME:-nse_market_data}
+    volumes:
+      - nse_timescaledb_data:/var/lib/postgresql/data
+      - ./data-ingestor/scripts/init_db.sql:/docker-entrypoint-initdb.d/init_db.sql
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${DB_USER:-nseadmin} -d ${DB_NAME:-nse_market_data}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - azureuser_app_network
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  nse-data-ingestor:
+    build: ./data-ingestor
+    container_name: nse-data-ingestor
+    restart: unless-stopped
+    depends_on:
+      nse-timescaledb:
+        condition: service_healthy
+    environment:
+      - DB_HOST=nse-timescaledb
+      - DB_PORT=5432
+      - DB_USER=${DB_USER:-nseadmin}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${DB_NAME:-nse_market_data}
+      - IIFL_APP_KEY=${IIFL_APP_KEY}
+      - IIFL_API_SECRET=${IIFL_API_SECRET}
+      - IIFL_CLIENT_ID=${IIFL_CLIENT_ID}
+      - IIFL_AUTH_CODE=${IIFL_AUTH_CODE}
+      - IIFL_SESSION_TOKEN=${IIFL_SESSION_TOKEN:-}
+      - IIFL_REDIRECT_URL=${IIFL_REDIRECT_URL:-http://localhost:3000/callback}
+      - SUBSCRIPTION_SYMBOL=${SUBSCRIPTION_SYMBOL:-NIFTY}
+      - SUBSCRIPTION_SEGMENT=${SUBSCRIPTION_SEGMENT:-NSEFO}
+      - STRIKE_RANGE=${STRIKE_RANGE:-20}
+      - ENABLE_BACKFILL=${ENABLE_BACKFILL:-false}
+      - BACKFILL_DAYS=${BACKFILL_DAYS:-30}
+      - BATCH_SIZE=100
+      - BATCH_FLUSH_INTERVAL=0.5
+      - OI_POLL_INTERVAL=180
+      # Safety / sanity checks (enabled by default in production)
+      - LTP_SANITY_ENABLED=true
+      - LTP_SANITY_THRESHOLD_PCT=200.0
+      - DROP_UNKNOWN_TICKS=true
+      - TZ=Asia/Kolkata
+    networks:
+      - azureuser_app_network
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+  nse-data-api:
+    build: ./data-api
+    container_name: nse-data-api
+    restart: unless-stopped
+    ports:
+      - "8088:8088"
+    depends_on:
+      nse-timescaledb:
+        condition: service_healthy
+    environment:
+      - DB_HOST=nse-timescaledb
+      - DB_PORT=5432
+      - DB_USER=${DB_USER:-nseadmin}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${DB_NAME:-nse_market_data}
+      - API_KEY=${DATA_API_KEY}
+      - API_PORT=8088
+      - IIFL_APP_KEY=${IIFL_APP_KEY}
+      - IIFL_CLIENT_ID=${IIFL_CLIENT_ID}
+      - IIFL_API_SECRET=${IIFL_API_SECRET}
+      - IIFL_AUTH_REDIRECT=${IIFL_AUTH_REDIRECT}
+      - AUTH_PAGE_PIN=${AUTH_PAGE_PIN:-1234}
+      - TZ=Asia/Kolkata
+    networks:
+      - azureuser_app_network
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+networks:
+  azureuser_app_network:
+    external: true
+
+volumes:
+  nse_timescaledb_data:
+    driver: local

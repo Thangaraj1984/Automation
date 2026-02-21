@@ -1,0 +1,234 @@
+{
+  "system_name": "Institutional_Nifty_Intraday_Options_AI",
+  "objective": {
+    "target_move_points": [20, 50],
+    "time_horizon_minutes": 15,
+    "trade_only_during_stress": true
+  },
+
+  "data_sources": {
+    "futures_feed": {
+      "topic": "/nifty/futures",
+      "fields": [
+        "timestamp",
+        "last_price",
+        "aggressive_buy_volume",
+        "aggressive_sell_volume",
+        "bid_depth_1_5",
+        "ask_depth_1_5",
+        "total_volume",
+        "open_interest"
+      ]
+    },
+    "options_feed": {
+      "topic_pattern": "/nifty/options/{strike}/{CE_PE}",
+      "fields": [
+        "timestamp",
+        "last_price",
+        "bid",
+        "ask",
+        "bid_depth_1_5",
+        "ask_depth_1_5",
+        "total_volume",
+        "open_interest",
+        "implied_volatility"
+      ]
+    },
+    "equity_heavyweights": {
+      "symbols": ["RELIANCE", "HDFCBANK", "ICICIBANK", "INFY", "TCS"],
+      "fields": [
+        "timestamp",
+        "last_price",
+        "aggressive_delta_volume",
+        "bid_depth",
+        "ask_depth"
+      ]
+    },
+    "volatility_indices": ["INDIA_VIX"]
+  },
+
+  "feature_engine": {
+    "delta_metrics": {
+      "cumulative_delta": "sum(aggressive_buy_volume - aggressive_sell_volume)",
+      "delta_velocity": "diff(cumulative_delta)",
+      "delta_acceleration": "diff(delta_velocity)",
+      "threshold": "abs(delta_acceleration) > 2 * rolling_std(delta_velocity, 20)"
+    },
+
+    "oi_metrics": {
+      "oi_velocity": "diff(open_interest)",
+      "oi_acceleration": "diff(oi_velocity)",
+      "threshold": "abs(oi_acceleration) > 1.5 * rolling_std(oi_velocity, 30)"
+    },
+
+    "iv_metrics": {
+      "iv_velocity": "diff(implied_volatility)",
+      "iv_acceleration": "diff(iv_velocity)",
+      "iv_momentum_positive": "iv_velocity > 0"
+    },
+
+    "premium_elasticity": {
+      "formula": "(option_price_change_pct) / (futures_price_change_pct)",
+      "threshold": "> 1.2"
+    },
+
+    "liquidity_fragility": {
+      "order_book_imbalance": "bid_depth_5 / ask_depth_5",
+      "thin_depth_condition": "current_depth < 0.5 * rolling_avg_depth_20min",
+      "fragile_condition": "OBI > 1.6 OR OBI < 0.6"
+    }
+  },
+
+  "gamma_engine": {
+    "gamma_formula": "Gamma = N'(d1) / (S * sigma * sqrt(T))",
+    "gex": "sum(Gamma * OI * lot_size * direction)",
+    "regime_classification": {
+      "positive_gamma": "gex > 0",
+      "negative_gamma": "gex < 0"
+    },
+    "gamma_flip_detection": "spot crosses price where gex == 0"
+  },
+
+  "dealer_stress_engine": {
+    "dealer_delta": "sum(option_delta * OI * direction)",
+    "delta_stress": "diff(dealer_delta)",
+    "stress_condition": "abs(delta_stress) > 2 * rolling_std(delta_stress, 30)"
+  },
+
+  "seller_stress_module": {
+    "stress_induced": {
+      "conditions": [
+        "oi_acceleration < 0",
+        "delta_acceleration > threshold",
+        "iv_acceleration > 0",
+        "thin_depth_condition == true"
+      ]
+    },
+    "passive_relief": {
+      "conditions": [
+        "oi_acceleration < 0",
+        "delta_acceleration approx 0",
+        "iv_acceleration <= 0"
+      ]
+    },
+    "exhaustion_phase": {
+      "conditions": [
+        "oi decreasing but decelerating",
+        "delta decelerating",
+        "iv turning negative"
+      ]
+    },
+    "seller_stress_index": {
+      "formula": "w1*delta_acceleration + w2*oi_acceleration + w3*iv_acceleration + w4*depth_factor",
+      "trade_threshold": "> predefined_value"
+    }
+  },
+
+  "gap_engine": {
+    "gap_size": "abs(open - prev_close) / prev_close",
+    "major_gap_threshold": "> 0.5%",
+    "overnight_oi_shift": "oi_preopen - oi_prev_close",
+
+    "first_5min_stress_test": {
+      "conditions_for_panic_gap": [
+        "oi_unwind",
+        "delta_acceleration_positive",
+        "iv_expansion"
+      ],
+      "repricing_gap_conditions": [
+        "oi_stable",
+        "iv_falling",
+        "depth_thick"
+      ]
+    },
+
+    "opening_range_break_logic": {
+      "time_window": "first 15 minutes",
+      "entry_condition": [
+        "break_opening_range",
+        "negative_gamma_regime",
+        "seller_stress_index_positive",
+        "iv_expanding"
+      ]
+    }
+  },
+
+  "structural_filters": {
+    "cpr_width_filter": "< 0.6% preferred",
+    "trade_locations": [
+      "previous_day_high",
+      "previous_day_low",
+      "heavy_oi_strike",
+      "vwap_rejection",
+      "liquidity_gap"
+    ]
+  },
+
+  "heavyweight_confirmation": {
+    "alignment_requirement": ">= 3 stocks aligned",
+    "correlation_threshold": "> 0.7 over 30min",
+    "index_estimator": "sum(weight_i * stock_return_i)"
+  },
+
+  "volatility_state_machine": {
+    "states": [
+      "compression",
+      "transition",
+      "expansion",
+      "exhaustion"
+    ],
+    "trade_allowed_state": "transition_to_expansion"
+  },
+
+  "scoring_model": {
+    "weights": {
+      "context": 2,
+      "iv_regime": 2,
+      "flow_stress": 3,
+      "location": 2,
+      "time_window": 1
+    },
+    "minimum_score_to_trade": 7
+  },
+
+  "machine_learning_layer": {
+    "target_variable": "probability_of_25pt_move_within_15min",
+    "trade_if_probability": ">= 0.65",
+    "features_used": [
+      "gex",
+      "delta_acceleration",
+      "oi_acceleration",
+      "seller_stress_index",
+      "liquidity_fragility",
+      "iv_momentum",
+      "heavyweight_alignment",
+      "time_of_day"
+    ]
+  },
+
+  "execution_engine": {
+    "entry_conditions": [
+      "spread_below_threshold",
+      "thin_liquidity_ahead",
+      "score >= 7",
+      "ml_probability >= 0.65"
+    ],
+    "exit_conditions": [
+      "target_30_to_50_points",
+      "delta_exhaustion",
+      "iv_collapse",
+      "time_stop_15_minutes"
+    ]
+  },
+
+  "risk_management": {
+    "daily_max_risk": "2%",
+    "per_trade_risk": "0.75%",
+    "reduce_size_if_iv_high": "iv_percentile > 80%",
+    "kill_switch": [
+      "2_consecutive_losses",
+      "gamma_regime_flip",
+      "volatility_compression_30min"
+    ]
+  }
+}

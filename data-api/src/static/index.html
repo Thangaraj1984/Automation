@@ -1,0 +1,1469 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NIFTY Options Chain — Live Dashboard</title>
+    <meta name="description"
+        content="Real-time NIFTY 50 Options Chain with OI analysis, Buildup signals, and PCR tracking">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap"
+        rel="stylesheet">
+    <style>
+        /* ===== CSS RESET & VARIABLES ===== */
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        :root {
+            --bg-primary: #0a0e17;
+            --bg-secondary: #111827;
+            --bg-card: #1a2236;
+            --bg-row-hover: #1e293b;
+            --bg-atm: #2a1f3d;
+            --border: #1e293b;
+            --border-accent: #334155;
+            --text-primary: #e2e8f0;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --text-header: #cbd5e1;
+            --accent-blue: #3b82f6;
+            --accent-cyan: #06b6d4;
+            --green-bright: #22c55e;
+            --green-soft: #16a34a;
+            --green-bg: rgba(34, 197, 94, 0.12);
+            --green-text: #4ade80;
+            --red-bright: #ef4444;
+            --red-soft: #dc2626;
+            --red-bg: rgba(239, 68, 68, 0.12);
+            --red-text: #f87171;
+            --yellow-bg: rgba(234, 179, 8, 0.15);
+            --yellow-text: #fbbf24;
+            --purple-bg: rgba(168, 85, 247, 0.15);
+            --purple-text: #a78bfa;
+            --gold: #f59e0b;
+            --ce-header-bg: #1a2e1a;
+            --pe-header-bg: #2e1a1a;
+            --oi-bar-ce: rgba(34, 197, 94, 0.35);
+            --oi-bar-pe: rgba(239, 68, 68, 0.35);
+            --font-main: 'Inter', -apple-system, sans-serif;
+            --font-mono: 'JetBrains Mono', 'Consolas', monospace;
+        }
+
+        body {
+            font-family: var(--font-main);
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: auto;
+        }
+
+        /* ===== TOP NAV BAR ===== */
+        .topbar {
+            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+            border-bottom: 1px solid var(--border);
+            padding: 10px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            backdrop-filter: blur(12px);
+        }
+
+        .topbar-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .logo {
+            font-size: 18px;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.5px;
+        }
+
+        .logo span {
+            font-weight: 400;
+            opacity: 0.7;
+        }
+
+        .live-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: var(--red-bg);
+            color: var(--red-text);
+            font-size: 11px;
+            font-weight: 700;
+            padding: 3px 10px;
+            border-radius: 20px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .live-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: var(--red-bright);
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+
+            50% {
+                opacity: 0.5;
+                transform: scale(0.8);
+            }
+        }
+
+        .topbar-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 7px 16px;
+            border: 1px solid var(--border-accent);
+            border-radius: 8px;
+            background: var(--bg-card);
+            color: var(--text-primary);
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: var(--font-main);
+        }
+
+        .btn:hover {
+            background: var(--bg-row-hover);
+            border-color: var(--accent-blue);
+            transform: translateY(-1px);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent-blue), #6366f1);
+            border-color: transparent;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #2563eb, #4f46e5);
+        }
+
+        .btn svg {
+            width: 14px;
+            height: 14px;
+        }
+
+        /* ===== INFO BANNER ===== */
+        .info-banner {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+            padding: 10px 24px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            font-size: 12px;
+        }
+
+        .info-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 4px 10px;
+            border-radius: 6px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+        }
+
+        .info-chip .label {
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .info-chip .value {
+            color: var(--text-primary);
+            font-weight: 700;
+            font-family: var(--font-mono);
+        }
+
+        .info-chip.spot .value {
+            color: var(--accent-cyan);
+            font-size: 14px;
+        }
+
+        .info-chip.bullish {
+            border-color: var(--green-soft);
+        }
+
+        .info-chip.bullish .value {
+            color: var(--green-text);
+        }
+
+        .info-chip.bearish {
+            border-color: var(--red-soft);
+        }
+
+        .info-chip.bearish .value {
+            color: var(--red-text);
+        }
+
+        .info-chip.neutral .value {
+            color: var(--yellow-text);
+        }
+
+        .info-chip select {
+            background: var(--bg-card);
+            color: var(--text-primary);
+            border: 1px solid var(--border-accent);
+            border-radius: 4px;
+            padding: 2px 6px;
+            font-size: 12px;
+            font-weight: 700;
+            font-family: var(--font-mono);
+            cursor: pointer;
+        }
+
+        .info-separator {
+            width: 1px;
+            height: 20px;
+            background: var(--border-accent);
+            margin: 0 4px;
+        }
+
+        /* ===== TOTALS BAR ===== */
+        .totals-bar {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+            padding: 8px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 32px;
+            font-size: 12px;
+        }
+
+        .total-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .total-item .label {
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .total-item .value {
+            font-family: var(--font-mono);
+            font-weight: 700;
+            font-size: 13px;
+        }
+
+        .pcr-bar-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex: 0 0 280px;
+        }
+
+        .pcr-bar {
+            flex: 1;
+            height: 10px;
+            background: var(--bg-card);
+            border-radius: 5px;
+            overflow: hidden;
+            display: flex;
+        }
+
+        .pcr-bar .ce-fill {
+            background: linear-gradient(90deg, #16a34a, #22c55e);
+            transition: width 0.5s ease;
+        }
+
+        .pcr-bar .pe-fill {
+            background: linear-gradient(90deg, #ef4444, #dc2626);
+            transition: width 0.5s ease;
+        }
+
+        /* ===== OPTION CHAIN TABLE ===== */
+        .table-wrapper {
+            overflow-x: auto;
+            padding: 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+            min-width: 1200px;
+        }
+
+        /* Column group headers */
+        thead tr.group-header th {
+            padding: 6px 4px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            border-bottom: 2px solid var(--border);
+            position: sticky;
+            top: 45px;
+            z-index: 10;
+        }
+
+        .ce-group {
+            background: var(--ce-header-bg);
+            color: var(--green-text);
+        }
+
+        .pe-group {
+            background: var(--pe-header-bg);
+            color: var(--red-text);
+        }
+
+        .strike-group {
+            background: var(--bg-card);
+            color: var(--gold);
+        }
+
+        /* Column headers */
+        thead tr.col-header th {
+            padding: 8px 4px;
+            font-size: 10px;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+            position: sticky;
+            top: 72px;
+            z-index: 10;
+            white-space: nowrap;
+            text-align: right;
+        }
+
+        thead tr.col-header th.text-left {
+            text-align: left;
+        }
+
+        thead tr.col-header th.text-center {
+            text-align: center;
+        }
+
+        /* Data rows */
+        tbody td {
+            padding: 5px 6px;
+            text-align: right;
+            font-family: var(--font-mono);
+            font-size: 11.5px;
+            font-weight: 500;
+            /* ensure high contrast so cells are visible across browsers */
+            color: var(--text-primary);
+            border-bottom: 1px solid rgba(30, 41, 59, 0.5);
+            white-space: nowrap;
+            transition: background 0.15s;
+        }
+
+        tbody tr:hover td {
+            background: var(--bg-row-hover);
+        }
+
+        /* ATM row */
+        tbody tr.atm-row td {
+            background: var(--bg-atm);
+            border-top: 1px solid rgba(168, 85, 247, 0.3);
+            border-bottom: 1px solid rgba(168, 85, 247, 0.3);
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+
+        tbody tr.atm-row:hover td {
+            background: rgba(42, 31, 61, 0.8);
+        }
+
+        /* ITM shading */
+        tbody tr.itm-ce td.ce-cell {
+            background: rgba(34, 197, 94, 0.04);
+        }
+
+        tbody tr.itm-pe td.pe-cell {
+            background: rgba(239, 68, 68, 0.04);
+        }
+
+        /* Strike column */
+        td.strike-cell {
+            text-align: center;
+            font-weight: 700;
+            color: var(--text-primary);
+            font-size: 12px;
+            background: rgba(15, 23, 42, 0.6);
+            border-left: 1px solid var(--border);
+            border-right: 1px solid var(--border);
+            position: relative;
+        }
+
+        /* LTP columns */
+        td.ltp-cell {
+            color: var(--text-primary);
+            font-weight: 700;
+        }
+
+        /* Change columns */
+        td.change-positive {
+            color: var(--green-text);
+        }
+
+        td.change-negative {
+            color: var(--red-text);
+        }
+
+        /* OI column with bar */
+        td.oi-cell {
+            position: relative;
+        }
+
+        td.oi-cell .oi-bar {
+            position: absolute;
+            top: 1px;
+            bottom: 1px;
+            right: 0;
+            border-radius: 3px;
+            opacity: 0.3;
+            transition: width 0.5s ease;
+        }
+
+        td.oi-cell .oi-value {
+            position: relative;
+            z-index: 1;
+        }
+
+        td.ce-oi .oi-bar {
+            background: var(--green-bright);
+        }
+
+        td.pe-oi .oi-bar {
+            background: var(--red-bright);
+        }
+
+        /* Chg OI coloring */
+        td.chg-oi-positive {
+            color: var(--green-text);
+        }
+
+        td.chg-oi-negative {
+            color: var(--red-text);
+        }
+
+        /* Buildup badges */
+        td.buildup-cell {
+            text-align: center;
+            font-family: var(--font-main);
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.3px;
+        }
+
+        .buildup-tag {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 9.5px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        .buildup-long-buildup {
+            background: var(--green-bg);
+            color: var(--green-text);
+            border: 1px solid rgba(34, 197, 94, 0.25);
+        }
+
+        .buildup-short-covering {
+            background: rgba(6, 182, 212, 0.12);
+            color: #22d3ee;
+            border: 1px solid rgba(6, 182, 212, 0.25);
+        }
+
+        .buildup-short-buildup {
+            background: var(--red-bg);
+            color: var(--red-text);
+            border: 1px solid rgba(239, 68, 68, 0.25);
+        }
+
+        .buildup-long-unwinding {
+            background: rgba(249, 115, 22, 0.12);
+            color: #fb923c;
+            border: 1px solid rgba(249, 115, 22, 0.25);
+        }
+
+        /* Volume bars */
+        td.volume-cell {
+            color: var(--text-muted);
+        }
+
+        /* Total row */
+        tbody tr.total-row td {
+            background: var(--bg-card);
+            border-top: 2px solid var(--border-accent);
+            font-weight: 700;
+            color: var(--text-primary);
+            font-size: 12px;
+        }
+
+        /* ===== SENTIMENT BADGE ===== */
+        .sentiment-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 12px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .sentiment-strong-bullish {
+            background: linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(34, 197, 94, 0.05));
+            color: var(--green-text);
+            border: 1px solid rgba(34, 197, 94, 0.3);
+        }
+
+        .sentiment-weak-bullish {
+            background: var(--green-bg);
+            color: var(--green-text);
+            border: 1px solid rgba(34, 197, 94, 0.2);
+        }
+
+        .sentiment-strong-bearish {
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(239, 68, 68, 0.05));
+            color: var(--red-text);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .sentiment-weak-bearish {
+            background: var(--red-bg);
+            color: var(--red-text);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+
+        .sentiment-neutral {
+            background: var(--yellow-bg);
+            color: var(--yellow-text);
+            border: 1px solid rgba(234, 179, 8, 0.2);
+        }
+
+        /* ===== LOADING / ERROR ===== */
+        .status-overlay {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 80px 24px;
+            gap: 16px;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--border);
+            border-top-color: var(--accent-blue);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .error-msg {
+            color: var(--red-text);
+            font-size: 14px;
+            text-align: center;
+        }
+
+        /* ===== FOOTER ===== */
+        .footer {
+            padding: 12px 24px;
+            text-align: center;
+            font-size: 11px;
+            color: var(--text-muted);
+            border-top: 1px solid var(--border);
+        }
+
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 768px) {
+            .topbar {
+                padding: 8px 12px;
+            }
+
+            .info-banner {
+                padding: 8px 12px;
+            }
+
+            .info-separator {
+                display: none;
+            }
+        }
+
+        /* ===== SCROLLBAR ===== */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-primary);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border-accent);
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--text-muted);
+        }
+
+        /* ===== REFRESH INDICATOR ===== */
+        .refresh-bar {
+            height: 2px;
+            background: var(--bg-secondary);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .refresh-bar .progress {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent-cyan), var(--accent-blue));
+            width: 0%;
+            transition: width linear;
+        }
+
+        /* Download dropdown */
+        .dropdown {
+            position: relative;
+        }
+
+        .dropdown-menu {
+            display: none;
+            position: absolute;
+            top: 100%;
+            right: 0;
+            margin-top: 4px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-accent);
+            border-radius: 8px;
+            overflow: hidden;
+            z-index: 200;
+            min-width: 180px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+        }
+
+        .dropdown-menu.show {
+            display: block;
+        }
+
+        .dropdown-menu button {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            width: 100%;
+            padding: 10px 16px;
+            border: none;
+            background: none;
+            color: var(--text-primary);
+            font-size: 12px;
+            font-family: var(--font-main);
+            cursor: pointer;
+            text-align: left;
+        }
+
+        .dropdown-menu button:hover {
+            background: var(--bg-row-hover);
+        }
+
+        .dropdown-menu button svg {
+            width: 14px;
+            height: 14px;
+            color: var(--text-muted);
+        }
+
+        /* Settings */
+        .settings-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        .settings-row select {
+            background: var(--bg-card);
+            color: var(--text-primary);
+            border: 1px solid var(--border-accent);
+            border-radius: 6px;
+            padding: 4px 8px;
+            font-size: 11px;
+            font-family: var(--font-main);
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- TOP BAR -->
+    <div class="topbar">
+        <div class="topbar-left">
+            <div class="logo">NSE<span>Chain</span></div>
+            <div class="live-badge">
+                <div class="live-dot"></div> LIVE
+            </div>
+            <div class="settings-row">
+                <span>Refresh:</span>
+                <select id="refreshInterval" onchange="setRefreshInterval()">
+                    <option value="2000">2s</option>
+                    <option value="3000" selected>3s</option>
+                    <option value="5000">5s</option>
+                    <option value="10000">10s</option>
+                    <option value="30000">30s</option>
+                </select>
+            </div>
+        </div>
+        <div class="topbar-right">
+            <span id="lastUpdated"
+                style="font-size:11px; color:var(--text-muted); font-family:var(--font-mono);">--</span>
+            <div class="dropdown">
+                <button class="btn" onclick="toggleDropdown()" id="downloadBtn">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" />
+                    </svg>
+                    Download
+                </button>
+                <div class="dropdown-menu" id="downloadMenu">
+                    <button onclick="downloadCSV('chain')">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                            <polyline points="14 2 14 8 20 8" />
+                        </svg>
+                        Option Chain Snapshot
+                    </button>
+                    <button onclick="downloadCSV('chain-history')">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                            <polyline points="14 2 14 8 20 8" />
+                        </svg>
+                        Chain History (Backtest)
+                    </button>
+                    <button onclick="downloadCSV('ohlcv')">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                            <polyline points="14 2 14 8 20 8" />
+                        </svg>
+                        NIFTY OHLCV (1-min)
+                    </button>
+                </div>
+            </div>
+            <button class="btn btn-primary" onclick="fetchChain()" id="refreshBtn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="23 4 23 10 17 10" />
+                    <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+                </svg>
+                Refresh
+            </button>
+        </div>
+    </div>
+
+    <!-- REFRESH BAR -->
+    <div class="refresh-bar">
+        <div class="progress" id="refreshProgress"></div>
+    </div>
+
+    <!-- INFO BANNER -->
+    <div class="info-banner" id="infoBanner">
+        <div class="info-chip spot">
+            <span class="label">NIFTY Spot</span>
+            <span class="value" id="spotPrice">—</span>
+        </div>
+        <div class="info-separator"></div>
+        <div class="info-chip">
+            <span class="label">ATM</span>
+            <span class="value" id="atmStrike">—</span>
+        </div>
+        <div class="info-chip">
+            <span class="label">Expiry</span>
+            <select id="expirySelect" onchange="onExpiryChange()">
+                <option value="">Loading...</option>
+            </select>
+        </div>
+        <div class="info-separator"></div>
+        <div class="info-chip" id="pcrChip">
+            <span class="label">PCR (OI)</span>
+            <span class="value" id="pcrValue">—</span>
+        </div>
+        <div class="info-chip" id="sentimentChip">
+            <span class="label">Sentiment</span>
+            <span class="value" id="sentimentValue">—</span>
+        </div>
+        <div class="info-separator"></div>
+        <div class="info-chip">
+            <span class="label">Strikes</span>
+            <span class="value" id="strikeCount">—</span>
+        </div>
+    </div>
+
+    <!-- TOTALS BAR -->
+    <div class="totals-bar" id="totalsBar">
+        <div class="total-item">
+            <span class="label">CE OI</span>
+            <span class="value" style="color:var(--green-text)" id="totalCeOi">—</span>
+        </div>
+        <div class="pcr-bar-wrapper">
+            <span style="color:var(--green-text); font-weight:700; font-size:11px;">CE</span>
+            <div class="pcr-bar">
+                <div class="ce-fill" id="pcrCeFill" style="width:50%"></div>
+                <div class="pe-fill" id="pcrPeFill" style="width:50%"></div>
+            </div>
+            <span style="color:var(--red-text); font-weight:700; font-size:11px;">PE</span>
+        </div>
+        <div class="total-item">
+            <span class="label">PE OI</span>
+            <span class="value" style="color:var(--red-text)" id="totalPeOi">—</span>
+        </div>
+        <div class="info-separator"></div>
+        <div class="total-item">
+            <span class="label">CE Vol</span>
+            <span class="value" style="color:var(--green-text)" id="totalCeVol">—</span>
+        </div>
+        <div class="total-item">
+            <span class="label">PE Vol</span>
+            <span class="value" style="color:var(--red-text)" id="totalPeVol">—</span>
+        </div>
+    </div>
+
+    <!-- OPTION CHAIN TABLE -->
+    <div class="table-wrapper" id="tableWrapper">
+        <div class="status-overlay" id="loadingState">
+            <div class="spinner"></div>
+            <span style="color:var(--text-muted)">Connecting to market data feed...</span>
+        </div>
+    </div>
+
+    <!-- FOOTER -->
+    <div class="footer">
+        Data from IIFL Capital Markets MQTT Feed • TimescaleDB backed • Built with ❤️
+    </div>
+
+    <script>
+        // ===== CONFIGURATION =====
+        const API_BASE = window.location.origin;
+        const API_KEY = 'nse-data-api-key-2026-qdaysec';  // Matches DATA_API_KEY in .env
+        const SYMBOL = 'NIFTY';
+
+        let refreshTimer = null;
+        let refreshMs = 3000;
+        let chainData = null;
+        let selectedExpiry = '';  // '' = nearest (default)
+        let maxCeOi = 0, maxPeOi = 0;
+
+        // ===== API CALLS =====
+        async function fetchExpiries() {
+            try {
+                const headers = {};
+                if (API_KEY) headers['X-API-Key'] = API_KEY;
+                const resp = await fetch(`${API_BASE}/api/v1/expiries/${SYMBOL}`, { headers });
+                const json = await resp.json();
+                if (json.status !== 'success') return;
+
+                const sel = document.getElementById('expirySelect');
+                sel.innerHTML = '';
+                (json.data || []).forEach((exp, i) => {
+                    const opt = document.createElement('option');
+                    opt.value = exp;
+                    opt.textContent = formatExpiry(exp);
+                    if (i === 0) opt.selected = true;
+                    sel.appendChild(opt);
+                });
+                selectedExpiry = sel.value;
+            } catch (e) {
+                console.warn('Failed to load expiries', e);
+            }
+        }
+
+        function onExpiryChange() {
+            selectedExpiry = document.getElementById('expirySelect').value;
+            chainData = null;  // reset so loading state shows
+            document.getElementById('tableWrapper').innerHTML = '<div class="status-overlay"><div class="spinner"></div><span style="color:var(--text-muted)">Loading...</span></div>';
+            fetchChain();
+        }
+
+        async function fetchChain() {
+            try {
+                const headers = {};
+                if (API_KEY) headers['X-API-Key'] = API_KEY;
+
+                let url = `${API_BASE}/api/v1/chain/${SYMBOL}`;
+                if (selectedExpiry) url += `?expiry=${selectedExpiry}`;
+
+                const resp = await fetch(url, { headers });
+                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+
+                const json = await resp.json();
+                if (json.status !== 'success') throw new Error(json.detail || 'API error');
+
+                chainData = json.data;
+                renderAll();
+                updateTimestamp();
+            } catch (err) {
+                console.error('Fetch error:', err);
+                document.getElementById('lastUpdated').textContent = `Error: ${err.message}`;
+                // Show error on first load
+                if (!chainData) {
+                    document.getElementById('tableWrapper').innerHTML = `
+                <div class="status-overlay">
+                    <div class="error-msg">
+                        <p style="font-size:18px; margin-bottom:8px;">⚠️ Could not connect to data feed</p>
+                        <p style="color:var(--text-muted)">${err.message}</p>
+                        <p style="color:var(--text-muted); margin-top:12px">Ensure the data-api is running at ${API_BASE}</p>
+                    </div>
+                    <button class="btn btn-primary" onclick="fetchChain()" style="margin-top:16px">Retry</button>
+                </div>
+            `;
+                }
+            }
+        }
+
+        // ===== RENDER =====
+        function renderAll() {
+            if (!chainData) return;
+
+            const { symbol, underlying_ltp, expiry, chain, totals } = chainData;
+            const spot = underlying_ltp || 0;
+            const atm = Math.round(spot / 50) * 50; // NIFTY rounds to 50
+
+            // Info banner
+            document.getElementById('spotPrice').textContent = spot ? spot.toFixed(2) : '—';
+            document.getElementById('atmStrike').textContent = atm || '—';
+            // Sync expiry dropdown selection with the data
+            const selEl = document.getElementById('expirySelect');
+            if (expiry && selEl) {
+                for (const opt of selEl.options) {
+                    if (opt.value === expiry) { opt.selected = true; break; }
+                }
+            }
+            document.getElementById('strikeCount').textContent = chain.length;
+
+            // PCR
+            const pcr = totals.pcr || 0;
+            document.getElementById('pcrValue').textContent = pcr.toFixed(2);
+
+            const pcrChip = document.getElementById('pcrChip');
+            pcrChip.className = `info-chip ${pcr > 1 ? 'bullish' : pcr < 0.9 ? 'bearish' : 'neutral'}`;
+
+            // Sentiment
+            const sentiment = getSentiment(pcr, totals);
+            const sentEl = document.getElementById('sentimentValue');
+            sentEl.textContent = sentiment.label;
+            const sentChip = document.getElementById('sentimentChip');
+            sentChip.className = `info-chip ${sentiment.class}`;
+
+            // Totals
+            document.getElementById('totalCeOi').textContent = formatNumber(totals.total_ce_oi);
+            document.getElementById('totalPeOi').textContent = formatNumber(totals.total_pe_oi);
+
+            // PCR bar
+            const totalOi = totals.total_ce_oi + totals.total_pe_oi;
+            if (totalOi > 0) {
+                const cePct = (totals.total_ce_oi / totalOi * 100).toFixed(1);
+                const pePct = (totals.total_pe_oi / totalOi * 100).toFixed(1);
+                document.getElementById('pcrCeFill').style.width = cePct + '%';
+                document.getElementById('pcrPeFill').style.width = pePct + '%';
+            }
+
+            // Volume totals
+            let totalCeVol = 0, totalPeVol = 0;
+            chain.forEach(s => {
+                if (s.ce) totalCeVol += s.ce.volume || 0;
+                if (s.pe) totalPeVol += s.pe.volume || 0;
+            });
+            document.getElementById('totalCeVol').textContent = formatNumber(totalCeVol);
+            document.getElementById('totalPeVol').textContent = formatNumber(totalPeVol);
+
+            // Find max OI for bars
+            maxCeOi = 0; maxPeOi = 0;
+            chain.forEach(s => {
+                if (s.ce && s.ce.oi > maxCeOi) maxCeOi = s.ce.oi;
+                if (s.pe && s.pe.oi > maxPeOi) maxPeOi = s.pe.oi;
+            });
+
+            // Build table — show 10 strikes above ATM + ATM + 10 strikes below ATM
+            const sorted = [...chain].sort((a, b) => a.strike - b.strike);
+
+            // find exact ATM index or nearest
+            let idx = sorted.findIndex(s => s.strike === atm);
+            if (idx === -1) {
+                idx = sorted.reduce((bestIdx, cur, i) => {
+                    if (bestIdx === -1) return i;
+                    const bestDiff = Math.abs(sorted[bestIdx].strike - atm);
+                    const curDiff = Math.abs(cur.strike - atm);
+                    return curDiff < bestDiff ? i : bestIdx;
+                }, -1);
+            }
+
+            let displayChain;
+            if (idx === -1) {
+                displayChain = sorted;
+            } else {
+                const start = Math.max(0, idx - 10);
+                const end = Math.min(sorted.length - 1, idx + 10);
+                displayChain = sorted.slice(start, end + 1);
+            }
+
+            renderTable(displayChain, atm);
+        }
+
+
+
+        function renderTable(chain, atm) {
+            const cols = ['Buildup', 'OI', 'Chg OI', 'Volume', 'LTP', 'Change', 'Open', 'High', 'Low', 'Close', 'Bid', 'Ask'];
+            const peCols = ['Bid', 'Ask', 'LTP', 'Change', 'Open', 'High', 'Low', 'Close', 'Volume', 'Chg OI', 'OI', 'Buildup'];
+
+            let html = '<table>';
+
+            // Group header
+            html += '<thead>';
+            html += '<tr class="group-header">';
+            html += `<th colspan="${cols.length}" class="ce-group">CALLS (CE)</th>`;
+            html += '<th class="strike-group">⚡</th>';
+            html += `<th colspan="${peCols.length}" class="pe-group">PUTS (PE)</th>`;
+            html += '</tr>';
+
+            // Column headers
+            html += '<tr class="col-header">';
+            cols.forEach(c => {
+                const align = c === 'Buildup' ? 'text-center' : '';
+                html += `<th class="${align}">${c}</th>`;
+            });
+            html += '<th class="text-center">STRIKE</th>';
+            peCols.forEach(c => {
+                const align = c === 'Buildup' ? 'text-center' : '';
+                html += `<th class="${align}">${c}</th>`;
+            });
+            html += '</tr>';
+            html += '</thead>';
+
+            // Body
+            html += '<tbody>';
+            chain.forEach(row => {
+                const strike = row.strike;
+                const isAtm = strike === atm;
+                const itmCe = strike < atm;
+                const itmPe = strike > atm;
+
+                let rowClass = '';
+                if (isAtm) rowClass = 'atm-row';
+                else if (itmCe) rowClass = 'itm-ce';
+                else if (itmPe) rowClass = 'itm-pe';
+
+                html += `<tr class="${rowClass}">`;
+
+                // CE side
+                const ce = row.ce || {};
+                const ceChange = (ce.ltp || 0) - (ce.close || 0);
+                const ceBuildup = getBuildup(ce.ltp, ce.close, ce.change_oi);
+
+                html += buildupCell(ceBuildup, 'ce-cell');
+                html += oiCell(ce.oi, maxCeOi, 'ce-oi ce-cell');
+                html += chgOiCell(ce.change_oi, 'ce-cell');
+                html += `<td class="volume-cell ce-cell">${formatNumber(ce.volume)}</td>`;
+                html += `<td class="ltp-cell ce-cell">${fmtPrice(ce.ltp)}</td>`;
+                html += changeCell(ceChange, 'ce-cell');
+                html += `<td class="ce-cell">${fmtPrice(ce.open)}</td>`;
+                html += `<td class="ce-cell">${fmtPrice(ce.high)}</td>`;
+                html += `<td class="ce-cell">${fmtPrice(ce.low)}</td>`;
+                html += `<td class="ce-cell">${fmtPrice(ce.close)}</td>`;
+                html += `<td class="ce-cell">${fmtPrice(ce.bid)}</td>`;
+                html += `<td class="ce-cell">${fmtPrice(ce.ask)}</td>`;
+
+                // Strike
+                html += `<td class="strike-cell">${strike.toFixed(0)}</td>`;
+
+                // PE side
+                const pe = row.pe || {};
+                const peChange = (pe.ltp || 0) - (pe.close || 0);
+                const peBuildup = getBuildup(pe.ltp, pe.close, pe.change_oi);
+
+                html += `<td class="pe-cell">${fmtPrice(pe.bid)}</td>`;
+                html += `<td class="pe-cell">${fmtPrice(pe.ask)}</td>`;
+                html += `<td class="ltp-cell pe-cell">${fmtPrice(pe.ltp)}</td>`;
+                html += changeCell(peChange, 'pe-cell');
+                html += `<td class="pe-cell">${fmtPrice(pe.open)}</td>`;
+                html += `<td class="pe-cell">${fmtPrice(pe.high)}</td>`;
+                html += `<td class="pe-cell">${fmtPrice(pe.low)}</td>`;
+                html += `<td class="pe-cell">${fmtPrice(pe.close)}</td>`;
+                html += `<td class="volume-cell pe-cell">${formatNumber(pe.volume)}</td>`;
+                html += chgOiCell(pe.change_oi, 'pe-cell');
+                html += oiCell(pe.oi, maxPeOi, 'pe-oi pe-cell');
+                html += buildupCell(peBuildup, 'pe-cell');
+
+                html += '</tr>';
+            });
+            html += '</tbody>';
+            html += '</table>';
+
+            document.getElementById('tableWrapper').innerHTML = html;
+        }
+
+        // ===== CELL HELPERS =====
+        function buildupCell(buildup, extraClass) {
+            if (!buildup || buildup === '-') return `<td class="buildup-cell ${extraClass}">—</td>`;
+            const cls = 'buildup-' + buildup.toLowerCase().replace(/\s+/g, '-');
+            return `<td class="buildup-cell ${extraClass}"><span class="buildup-tag ${cls}">${buildup}</span></td>`;
+        }
+
+        function oiCell(oi, maxOi, extraClass) {
+            if (!oi) return `<td class="oi-cell ${extraClass}"><span class="oi-value">—</span></td>`;
+            const pct = maxOi > 0 ? (oi / maxOi * 100).toFixed(1) : 0;
+            return `<td class="oi-cell ${extraClass}"><div class="oi-bar" style="width:${pct}%"></div><span class="oi-value">${formatNumber(oi)}</span></td>`;
+        }
+
+        function chgOiCell(chgOi, extraClass) {
+            if (chgOi === undefined || chgOi === null) return `<td class="${extraClass}">—</td>`;
+            const cls = chgOi > 0 ? 'chg-oi-positive' : chgOi < 0 ? 'chg-oi-negative' : '';
+            const prefix = chgOi > 0 ? '+' : '';
+            return `<td class="${cls} ${extraClass}">${prefix}${formatNumber(chgOi)}</td>`;
+        }
+
+        function changeCell(change, extraClass) {
+            if (!change && change !== 0) return `<td class="${extraClass}">—</td>`;
+            const cls = change > 0 ? 'change-positive' : change < 0 ? 'change-negative' : '';
+            const prefix = change > 0 ? '+' : '';
+            return `<td class="${cls} ${extraClass}">${prefix}${change.toFixed(2)}</td>`;
+        }
+
+        // ===== FORMATTING =====
+        function fmtPrice(v) {
+            if (!v && v !== 0) return '—';
+            return v.toFixed(2);
+        }
+
+        function formatNumber(n) {
+            if (n === null || n === undefined) return '—';
+            n = Number(n);
+            if (isNaN(n)) return '—';
+            if (Math.abs(n) >= 10000000) return (n / 10000000).toFixed(2) + ' Cr';
+            if (Math.abs(n) >= 100000) return (n / 100000).toFixed(2) + ' L';
+            if (Math.abs(n) >= 1000) return n.toLocaleString('en-IN');
+            return n.toString();
+        }
+
+        function formatExpiry(dateStr) {
+            const d = new Date(dateStr + 'T00:00:00');
+            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            return `${d.getDate()}-${months[d.getMonth()]}-${d.getFullYear()}`;
+        }
+
+        // ===== BUILDUP LOGIC =====
+        function getBuildup(ltp, close, chgOi) {
+            if (!ltp || !close || chgOi === undefined || chgOi === null) return '-';
+            const priceChg = ltp - close;
+            if (priceChg > 0 && chgOi > 0) return 'Long Buildup';
+            if (priceChg < 0 && chgOi > 0) return 'Short Buildup';
+            if (priceChg < 0 && chgOi < 0) return 'Long Unwinding';
+            if (priceChg > 0 && chgOi < 0) return 'Short Covering';
+            return '-';
+        }
+
+        // ===== SENTIMENT =====
+        function getSentiment(pcr, totals) {
+            if (pcr > 1.1) return { label: 'STRONG BULLISH', class: 'bullish' };
+            if (pcr > 1.0) return { label: 'WEAK BULLISH', class: 'bullish' };
+            if (pcr < 0.7) return { label: 'STRONG BEARISH', class: 'bearish' };
+            if (pcr < 0.9) return { label: 'WEAK BEARISH', class: 'bearish' };
+            return { label: 'NEUTRAL', class: 'neutral' };
+        }
+
+        // ===== TIMESTAMP =====
+        function updateTimestamp() {
+            const now = new Date();
+            const h = now.getHours().toString().padStart(2, '0');
+            const m = now.getMinutes().toString().padStart(2, '0');
+            const s = now.getSeconds().toString().padStart(2, '0');
+            document.getElementById('lastUpdated').textContent = `Updated: ${h}:${m}:${s}`;
+        }
+
+        // ===== AUTO-REFRESH =====
+        function setRefreshInterval() {
+            refreshMs = parseInt(document.getElementById('refreshInterval').value);
+            startAutoRefresh();
+        }
+
+        function startAutoRefresh() {
+            if (refreshTimer) clearInterval(refreshTimer);
+            refreshTimer = setInterval(() => {
+                fetchChain();
+                // Also render any SSE tick updates that accumulated since last refresh
+                if (chainData) renderAll();
+                animateProgress();
+            }, refreshMs);
+            animateProgress();
+        }
+
+        function animateProgress() {
+            const bar = document.getElementById('refreshProgress');
+            bar.style.transition = 'none';
+            bar.style.width = '0%';
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    bar.style.transition = `width ${refreshMs}ms linear`;
+                    bar.style.width = '100%';
+                });
+            });
+        }
+
+        // ===== DOWNLOAD =====
+        function toggleDropdown() {
+            document.getElementById('downloadMenu').classList.toggle('show');
+        }
+
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.dropdown')) {
+                document.getElementById('downloadMenu').classList.remove('show');
+            }
+        });
+
+        function downloadCSV(type) {
+            document.getElementById('downloadMenu').classList.remove('show');
+
+            if (type === 'chain' && chainData) {
+                // Current option chain snapshot — 15 strikes above/below ATM
+                const spot = chainData.underlying_ltp || 0;
+                const atm = Math.round(spot / 50) * 50;
+                const sorted = [...chainData.chain].sort((a, b) => a.strike - b.strike);
+                let atmIdx = sorted.findIndex(s => s.strike === atm);
+                if (atmIdx === -1) atmIdx = sorted.reduce((best, cur, i) =>
+                    best === -1 ? i : (Math.abs(cur.strike - atm) < Math.abs(sorted[best].strike - atm) ? i : best), -1);
+                const sStart = Math.max(0, atmIdx - 15);
+                const sEnd = Math.min(sorted.length - 1, atmIdx + 15);
+                const filtered = atmIdx >= 0 ? sorted.slice(sStart, sEnd + 1) : sorted;
+
+                let csv = 'CE_Buildup,CE_OI,CE_ChgOI,CE_Volume,CE_LTP,CE_Change,CE_Open,CE_High,CE_Low,CE_Close,CE_Bid,CE_Ask,Strike,PE_Bid,PE_Ask,PE_LTP,PE_Change,PE_Open,PE_High,PE_Low,PE_Close,PE_Volume,PE_ChgOI,PE_OI,PE_Buildup\n';
+
+                filtered.forEach(row => {
+                    const ce = row.ce || {};
+                    const pe = row.pe || {};
+                    const ceChg = (ce.ltp || 0) - (ce.close || 0);
+                    const peChg = (pe.ltp || 0) - (pe.close || 0);
+                    const ceB = getBuildup(ce.ltp, ce.close, ce.change_oi);
+                    const peB = getBuildup(pe.ltp, pe.close, pe.change_oi);
+
+                    csv += [
+                        ceB, ce.oi || '', ce.change_oi || '', ce.volume || '', ce.ltp || '', ceChg.toFixed(2),
+                        ce.open || '', ce.high || '', ce.low || '', ce.close || '', ce.bid || '', ce.ask || '',
+                        row.strike,
+                        pe.bid || '', pe.ask || '', pe.ltp || '', peChg.toFixed(2),
+                        pe.open || '', pe.high || '', pe.low || '', pe.close || '', pe.volume || '',
+                        pe.change_oi || '', pe.oi || '', peB
+                    ].join(',') + '\n';
+                });
+
+                downloadFile(csv, `NIFTY_OptionChain_${getTimestamp()}.csv`);
+
+            } else if (type === 'chain-history') {
+                // Historical chain tick snapshots for backtesting
+                downloadChainHistory();
+
+            } else if (type === 'ohlcv') {
+                // NIFTY INDEX 1-min OHLCV candles
+                fetchAndDownload(
+                    `/api/v1/ohlcv/${SYMBOL}?interval=1m&limit=1000`,
+                    `NIFTY_OHLCV_1min_${getTimestamp()}.csv`,
+                    null, 'candles', ['time', 'open', 'high', 'low', 'close', 'volume']
+                );
+            }
+        }
+
+        async function downloadChainHistory() {
+            const btn = document.getElementById('downloadBtn');
+            const origText = btn.innerHTML;
+            btn.innerHTML = '<span style="animation:pulse 1s infinite">Preparing...</span>';
+            btn.disabled = true;
+
+            try {
+                const headers = {};
+                if (API_KEY) headers['X-API-Key'] = API_KEY;
+
+                const resp = await fetch(
+                    `${API_BASE}/api/v1/chain-history/${SYMBOL}?interval_sec=3&limit=50000`,
+                    { headers }
+                );
+                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+
+                const json = await resp.json();
+                const snapshots = json.data?.snapshots || [];
+
+                if (snapshots.length === 0) {
+                    alert('No chain history data available yet. Data accumulates as the ingestor runs.');
+                    return;
+                }
+
+                let csv = 'time,instrument_id,strike,option_type,type,ltp,bid,ask,volume,open,high,low,close\n';
+                snapshots.forEach(s => {
+                    csv += [
+                        s.time, s.instrument_id, s.strike ?? '', s.option_type ?? '', s.type ?? '',
+                        s.ltp, s.bid, s.ask, s.volume, s.open, s.high, s.low, s.close
+                    ].join(',') + '\n';
+                });
+
+                downloadFile(csv, `NIFTY_ChainHistory_${json.data.expiry}_${getTimestamp()}.csv`);
+            } catch (err) {
+                alert('Download failed: ' + err.message);
+            } finally {
+                btn.innerHTML = origText;
+                btn.disabled = false;
+            }
+        }
+
+        async function fetchAndDownload(endpoint, filename, fields, dataKey, fieldOverride) {
+            try {
+                const headers = {};
+                if (API_KEY) headers['X-API-Key'] = API_KEY;
+                const resp = await fetch(API_BASE + endpoint, { headers });
+                const json = await resp.json();
+                const data = dataKey ? json.data[dataKey] : json.data;
+                const cols = fieldOverride || fields;
+
+                let csv = cols.join(',') + '\n';
+                data.forEach(row => {
+                    csv += cols.map(c => row[c] ?? '').join(',') + '\n';
+                });
+                downloadFile(csv, filename);
+            } catch (err) {
+                alert('Download failed: ' + err.message);
+            }
+        }
+
+        // Convert ISO/UTC timestamp to IST display string
+        function toIST(isoStr) {
+            if (!isoStr) return '';
+            const d = new Date(isoStr);
+            if (isNaN(d)) return isoStr;
+            // IST = UTC + 5:30
+            const ist = new Date(d.getTime() + (5.5 * 60 * 60 * 1000));
+            const pad = n => String(n).padStart(2, '0');
+            return `${ist.getUTCFullYear()}-${pad(ist.getUTCMonth()+1)}-${pad(ist.getUTCDate())} ${pad(ist.getUTCHours())}:${pad(ist.getUTCMinutes())}:${pad(ist.getUTCSeconds())}`;
+        }
+
+        function downloadFile(content, filename) {
+            const blob = new Blob([content], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function getTimestamp() {
+            const d = new Date();
+            return d.toISOString().slice(0, 10) + '_' + d.toTimeString().slice(0, 8).replace(/:/g, '');
+        }
+
+        // ===== SSE (live) =====
+        let sse = null;
+        function setupSSE() {
+            if (!API_KEY) return; // SSE will work only when API key is configured on server
+            const url = `${API_BASE}/api/v1/stream?symbols=${SYMBOL}&api_key=${encodeURIComponent(API_KEY)}`;
+            try {
+                sse = new EventSource(url);
+
+                sse.addEventListener('open', () => {
+                    const lb = document.querySelector('.live-badge');
+                    if (lb) lb.style.opacity = '1';
+                    console.info('SSE connected');
+                });
+
+                sse.addEventListener('error', (err) => {
+                    const lb = document.querySelector('.live-badge');
+                    if (lb) lb.style.opacity = '0.5';
+                    console.warn('SSE error', err);
+                });
+
+                sse.addEventListener('tick', (e) => {
+                    try {
+                        const t = JSON.parse(e.data);
+                        applySseTick(t);
+                    } catch (ex) {
+                        console.debug('Malformed SSE tick', ex);
+                    }
+                });
+
+            } catch (e) {
+                console.warn('Unable to open SSE', e);
+            }
+        }
+
+        function applySseTick(tick) {
+            // tick: { instrument_id, symbol, strike, option_type, ltp, volume, bid, ask, timestamp }
+            if (!chainData || !chainData.chain) return;
+            const strike = Number(tick.strike);
+            const opt = (tick.option_type || '').toUpperCase();
+            const entry = chainData.chain.find(c => Number(c.strike) === strike);
+            if (!entry) return; // strike not in current chain (ignore)
+
+            const side = opt === 'CE' ? 'ce' : (opt === 'PE' ? 'pe' : null);
+            if (!side || !entry[side]) return;
+
+            // Only apply SSE tick if instrument_id matches the chain's instrument for this strike/side
+            // This prevents cross-expiry data mixing (e.g., 2-Mar tick overwriting 24-Feb chain)
+            if (entry[side].instrument_id && tick.instrument_id !== entry[side].instrument_id) return;
+
+            // update fields in-place (data only, no re-render)
+            // The refresh timer controls when renderAll() is called,
+            // so the visual refresh rate matches the user's selected interval.
+            entry[side].ltp = tick.ltp ?? entry[side].ltp;
+            entry[side].volume = tick.volume ?? entry[side].volume;
+            entry[side].bid = tick.bid ?? entry[side].bid;
+            entry[side].ask = tick.ask ?? entry[side].ask;
+            entry[side].last_updated = tick.timestamp ?? entry[side].last_updated;
+        }
+
+        // ===== INIT =====
+        fetchExpiries().then(() => {
+            fetchChain();
+            startAutoRefresh();
+        });
+        setupSSE();
+    </script>
+</body>
+
+</html>

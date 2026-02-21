@@ -1,0 +1,14 @@
+{
+  "_comment": "Copy this file to config.json and fill in your IIFL credentials. This file is only used by local dev scripts (update_auth, get_iifl_jwt). The main stack reads all config from .env",
+  "iifl": {
+    "api_key": "YOUR_IIFL_APP_KEY",
+    "api_secret": "YOUR_IIFL_API_SECRET",
+    "client_id": "YOUR_IIFL_CLIENT_ID",
+    "auth_code": "YOUR_DAILY_AUTH_CODE",
+    "totp_secret": "YOUR_TOTP_SECRET_IF_APPLICABLE",
+    "subscriptions": [
+      "nseeq/INSTRUMENT_ID_1",
+      "nseeq/INSTRUMENT_ID_2"
+    ]
+  }
+}

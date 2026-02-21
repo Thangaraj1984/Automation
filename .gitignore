@@ -1,0 +1,55 @@
+# =============================================================
+# NSE Market Data Stack — .gitignore
+# =============================================================
+
+# ── Secrets & Credentials (NEVER commit these) ───────────────
+.env
+.env.vm
+.env.*.local
+config.json
+
+# ── Python ───────────────────────────────────────────────────
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# ── Development & Debug Artifacts ────────────────────────────
+# temp/ contains ad-hoc debug/fix scripts and logs that are
+# environment-specific and not part of the deployable stack
+temp/
+
+# ── AI Agent Context Files ───────────────────────────────────
+# These contain deployment-specific context for AI coding assistants
+.agent/
+.gemini/
+.copilot/
+.playwright-mcp/
+
+# ── Logs ─────────────────────────────────────────────────────
+*.log
+logs/
+service_account.json
+
+# ── IDE / OS ─────────────────────────────────────────────────
+.vscode/settings.json
+.idea/
+*.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── Docker overrides ─────────────────────────────────────────
+docker-compose.override.yml
+
+# ── Certificates & Keys ──────────────────────────────────────
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
